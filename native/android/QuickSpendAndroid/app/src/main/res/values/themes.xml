@@ -1,0 +1,14 @@
+<resources>
+    <style name="Theme.QuickSpend" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/quickspend_orange</item>
+        <item name="colorPrimaryContainer">@color/quickspend_orange_container</item>
+        <item name="colorSecondary">@color/quickspend_cyan</item>
+        <item name="colorSecondaryContainer">@color/quickspend_cyan_container</item>
+        <item name="colorTertiary">@color/quickspend_violet</item>
+        <item name="colorTertiaryContainer">@color/quickspend_violet_container</item>
+        <item name="colorError">@color/quickspend_pink</item>
+        <item name="colorSurface">@color/quickspend_surface</item>
+        <item name="colorOnSurface">@color/quickspend_on_surface</item>
+        <item name="colorOutline">@color/quickspend_outline</item>
+    </style>
+</resources>

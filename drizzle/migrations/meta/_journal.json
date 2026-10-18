@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792133168409,
+      "tag": "0000_profiles_and_expenses",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792134547128,
+      "tag": "0001_budgets_and_groups",
+      "breakpoints": true
+    }
+  ]
+}

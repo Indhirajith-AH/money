@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- QuickSpend Brand Colors matching web app -->
+    <color name="quickspend_orange">#FF7A2E</color>
+    <color name="quickspend_orange_container">#FFE8D0</color>
+    <color name="quickspend_cyan">#22D3EE</color>
+    <color name="quickspend_cyan_container">#D0F8FF</color>
+    <color name="quickspend_violet">#A78BFA</color>
+    <color name="quickspend_violet_container">#F0EBFF</color>
+    <color name="quickspend_green">#4ADE80</color>
+    <color name="quickspend_green_container">#E8FFEF</color>
+    <color name="quickspend_pink">#F472B6</color>
+    <color name="quickspend_pink_container">#FFE8F5</color>
+    
+    <!-- Dark theme base (RUBRIC Agentic OS style) -->
+    <color name="quickspend_surface">#090C15</color>
+    <color name="quickspend_on_surface">#F8FAFC</color>
+    <color name="quickspend_on_surface_variant">#94A3B8</color>
+    <color name="quickspend_outline">#1E293B</color>
+    <color name="quickspend_surface_container_low">#0F172A</color>
+    <color name="quickspend_surface_container">#111827</color>
+    <color name="quickspend_surface_container_high">#1E293B</color>
+    <color name="quickspend_surface_container_highest">#334155</color>
+    <color name="quickspend_inverse_surface">#F8FAFC</color>
+    <color name="quickspend_inverse_on_surface">#090C15</color>
+    <color name="quickspend_background">#090C15</color>
+    <color name="quickspend_on_background">#F8FAFC</color>
+    
+    <!-- Light theme fallback -->
+    <color name="quickspend_surface_light">#F8FAFC</color>
+    <color name="quickspend_on_surface_light">#090C15</color>
+    <color name="quickspend_background_light">#FFFFFF</color>
+</resources>
