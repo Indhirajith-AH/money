@@ -45,6 +45,7 @@
   box-sizing: border-box;
   border-color: var(--border);
   letter-spacing: 0;
+  touch-action: manipulation;
 }
 body {
   margin: 0;

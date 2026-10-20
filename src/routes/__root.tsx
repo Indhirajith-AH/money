@@ -79,11 +79,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#141a33" },
       { title: "QuickSpend" },
       { name: "description", content: "Your daily spending, in balance." },
       { name: "author", content: "Lovable" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "QuickSpend" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "application-name", content: "QuickSpend" },
       { property: "og:title", content: "QuickSpend" },
       { property: "og:description", content: "Your daily spending, in balance." },
       { property: "og:type", content: "website" },
