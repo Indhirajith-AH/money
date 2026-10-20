@@ -1,10 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import "@lovable.dev/cloud-auth-js/styles.css";
 import { Button } from "@/components/ui/button";
 import { Icon, useSpend } from "@/components/spend-shell";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -27,7 +25,9 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
+  const [isError, setIsError] = useState(false);
   const [busy, setBusy] = useState(false);
+
   useEffect(() => {
     if (session) navigate({ to: "/", replace: true });
   }, [session, navigate]);
@@ -36,22 +36,71 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     setMsg("");
+    setIsError(false);
+
+    const cleanEmail = email.trim();
+
     if (mode === "up") {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
         password,
         options: { emailRedirectTo: window.location.origin },
       });
-      setMsg(error ? error.message : "Check your email to confirm your account.");
+      if (error) {
+        setMsg(error.message);
+        setIsError(true);
+      } else if (data?.session) {
+        navigate({ to: "/", replace: true });
+      } else {
+        setMsg("Account created! Please check your email to confirm your account, then sign in.");
+        setIsError(false);
+      }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setMsg(error.message);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      if (error) {
+        setMsg(error.message);
+        setIsError(true);
+      } else if (data?.session) {
+        navigate({ to: "/", replace: true });
+      }
     }
     setBusy(false);
   };
-  const oauth = async (p: "google" | "lovable") => {
-    const r = await lovable.auth.signInWithOAuth(p, { redirect_uri: window.location.origin });
-    if (r.error) setMsg(r.error.message ?? "Sign-in failed");
+
+  const resendConfirmation = async () => {
+    if (!email) return;
+    setBusy(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (error) {
+      setMsg(error.message);
+      setIsError(true);
+    } else {
+      setMsg("Confirmation email resent! Please check your inbox and spam folder.");
+      setIsError(false);
+    }
+    setBusy(false);
+  };
+
+  const signInWithGoogle = async () => {
+    setBusy(true);
+    setMsg("");
+    setIsError(false);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      setMsg(error.message);
+      setIsError(true);
+      setBusy(false);
+    }
   };
 
   return (
@@ -66,13 +115,10 @@ function AuthPage() {
             <p className="small muted">Your expenses sync to every device you sign in on.</p>
           </div>
         </div>
-        <Button variant="action" onClick={() => oauth("google")}>
+        <Button variant="action" disabled={busy} onClick={signInWithGoogle}>
           <Icon name="account_circle" />
           Continue with Google
         </Button>
-        <button type="button" className="lovable-auth-button" onClick={() => oauth("lovable")}>
-          Continue with Lovable
-        </button>
         <div className="label uppercase text-center">or with email</div>
         <form className="stack" onSubmit={submit}>
           <input
@@ -90,16 +136,46 @@ function AuthPage() {
             required
             minLength={6}
             aria-label="Password"
-            placeholder="Password"
+            placeholder="Password (minimum 6 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           <Button variant="save" type="submit" disabled={busy}>
-            {mode === "in" ? "Sign in" : "Sign up"}
+            {busy ? "Please wait..." : mode === "in" ? "Sign in" : "Sign up"}
           </Button>
         </form>
-        {msg && <p className="small mint" role="status">{msg}</p>}
-        <button type="button" className="qs-link small" onClick={() => setMode(mode === "in" ? "up" : "in")}>
+
+        {msg && (
+          <div
+            className={`small rounded-lg p-3 ${
+              isError
+                ? "text-red-300 bg-red-950/40 border border-red-800/60"
+                : "text-emerald-300 bg-emerald-950/40 border border-emerald-800/60"
+            }`}
+            role={isError ? "alert" : "status"}
+          >
+            <p>{msg}</p>
+            {isError && msg.toLowerCase().includes("not confirmed") && (
+              <button
+                type="button"
+                onClick={resendConfirmation}
+                disabled={busy}
+                className="mt-2 text-xs underline font-semibold text-amber-300 hover:text-amber-200 block"
+              >
+                Resend confirmation email to {email}
+              </button>
+            )}
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="qs-link small"
+          onClick={() => {
+            setMode(mode === "in" ? "up" : "in");
+            setMsg("");
+          }}
+        >
           {mode === "in" ? "New here? Create an account" : "Already have an account? Sign in"}
         </button>
       </section>

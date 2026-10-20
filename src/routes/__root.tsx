@@ -12,7 +12,6 @@ import { useEffect, type ReactNode } from "react";
 
 import { SpendProvider, AppShell } from "@/components/spend-shell";
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerServiceWorker } from "../lib/register-sw";
 
 function NotFoundComponent() {
@@ -40,9 +39,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -83,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "theme-color", content: "#141a33" },
       { title: "QuickSpend" },
       { name: "description", content: "Your daily spending, in balance." },
-      { name: "author", content: "Lovable" },
+      { name: "author", content: "QuickSpend" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "QuickSpend" },
@@ -93,7 +89,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Your daily spending, in balance." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:site", content: "@QuickSpend" },
     ],
     links: [
       {

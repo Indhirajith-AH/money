@@ -21,7 +21,7 @@ export type Expense = {
   icon: string;
 };
 const referenceImages = {
-  logo: "https://lh3.googleusercontent.com/aida-public/AB6AXuBExr7RCpiqRkmPIG8QsKuqkSK9dheLCpiNZHgtXvAD4DGFx-zxuKR1yKegLFhWaS1k_8WpG32TDU5cT7Dq0z_eANvvn3SaP9bUed75GiCUzO5YkGR4HrQkLiY1nMMfovBhum3wQXnvMnqz2Oq31RGW3j5pmqA5UJPtnErP8ll1R1sDBFc918QsS-CiXYEQPQSFbNHI1dWi3EQIw-Z30UQi5WO06RLUYLbGo7fMVqQK7-1y-wT9Sun9",
+  logo: "/apple-touch-icon.png",
   profile:
     "https://lh3.googleusercontent.com/aida-public/AB6AXuDKtR-lnXIVAaLLur7Ewk5eC-4GzVG-N8r1W9VXZUoPm0YjqexwTTlXwlpJHBbx7RGOTsgLt1BMEXk4Cb7umCZjFiUAOtaMKueXZuFoK3hRykw7PLMsU2gWkpf4epaK6SW2ieg2BXYkx7vK4hG6ePiO2R1q0Ema7RwDeKDhwTv6DftEYCGbTMdOFdyPJ7E_K11R9ZoVUUeLRL7osUPczkJjE2KxSWy2cDQG3fdKRhMvWPGalY6AI7gy",
 };
