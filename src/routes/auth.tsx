@@ -22,6 +22,7 @@ function AuthPage() {
   const { session } = useSpend();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"in" | "up">("in");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
@@ -44,16 +45,37 @@ function AuthPage() {
       const { data, error } = await supabase.auth.signUp({
         email: cleanEmail,
         password,
-        options: { emailRedirectTo: window.location.origin },
+        options: {
+          data: {
+            display_name: username.trim() || undefined,
+          },
+        },
       });
+
       if (error) {
         setMsg(error.message);
         setIsError(true);
       } else if (data?.session) {
         navigate({ to: "/", replace: true });
       } else {
-        setMsg("Account created! Please check your email to confirm your account, then sign in.");
-        setIsError(false);
+        // Automatically attempt sign in
+        const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (loginData?.session) {
+          navigate({ to: "/", replace: true });
+        } else if (loginErr) {
+          if (loginErr.message.toLowerCase().includes("not confirmed")) {
+            setMsg(
+              "Email confirmation is enabled in your Supabase project. Turn off 'Confirm email' in Supabase Dashboard (Authentication -> Providers -> Email) for instant sign-up."
+            );
+          } else {
+            setMsg(loginErr.message);
+          }
+          setIsError(true);
+        }
       }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -61,29 +83,17 @@ function AuthPage() {
         password,
       });
       if (error) {
-        setMsg(error.message);
+        if (error.message.toLowerCase().includes("not confirmed")) {
+          setMsg(
+            "Email confirmation is enabled in your Supabase project. Turn off 'Confirm email' in Supabase Dashboard (Authentication -> Providers -> Email) to sign in."
+          );
+        } else {
+          setMsg(error.message);
+        }
         setIsError(true);
       } else if (data?.session) {
         navigate({ to: "/", replace: true });
       }
-    }
-    setBusy(false);
-  };
-
-  const resendConfirmation = async () => {
-    if (!email) return;
-    setBusy(true);
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
-    });
-    if (error) {
-      setMsg(error.message);
-      setIsError(true);
-    } else {
-      setMsg("Confirmation email resent! Please check your inbox and spam folder.");
-      setIsError(false);
     }
     setBusy(false);
   };
@@ -121,6 +131,17 @@ function AuthPage() {
         </Button>
         <div className="label uppercase text-center">or with email</div>
         <form className="stack" onSubmit={submit}>
+          {mode === "up" && (
+            <input
+              className="field"
+              type="text"
+              required
+              aria-label="Username"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          )}
           <input
             className="field"
             type="email"
@@ -155,16 +176,6 @@ function AuthPage() {
             role={isError ? "alert" : "status"}
           >
             <p>{msg}</p>
-            {isError && msg.toLowerCase().includes("not confirmed") && (
-              <button
-                type="button"
-                onClick={resendConfirmation}
-                disabled={busy}
-                className="mt-2 text-xs underline font-semibold text-amber-300 hover:text-amber-200 block"
-              >
-                Resend confirmation email to {email}
-              </button>
-            )}
           </div>
         )}
 
