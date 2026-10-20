@@ -8,19 +8,27 @@ import { groupBalances, settleUp, type SplitEntry } from "@/lib/money";
 type Group = { id: string; name: string; members: string[] };
 type Entry = SplitEntry & { id: string; groupId: string; description: string; createdAt: string };
 
-const demoGroups: Group[] = [{ id: "demo", name: "Goa Trip", members: ["You", "Rahul", "Ananya"] }];
-const demoEntries: Entry[] = [
-  { id: "d1", groupId: "demo", kind: "expense", description: "Beach shack dinner", amount: 3600, paidBy: "You", splitAmong: [], createdAt: new Date().toISOString() },
-  { id: "d2", groupId: "demo", kind: "expense", description: "Scooter rental", amount: 1500, paidBy: "Rahul", splitAmong: [], createdAt: new Date().toISOString() },
-];
-const money = (n: number) => "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const demoGroups: Group[] = [];
+const demoEntries: Entry[] = [];
 
 export function Groups() {
-  const { session, notify } = useSpend();
+  const { session, notify, currencySymbol, formatMoney } = useSpend();
   const userId = session?.user.id;
-  const [groups, setGroups] = useState<Group[]>(demoGroups);
-  const [entries, setEntries] = useState<Entry[]>(demoEntries);
-  const [activeId, setActiveId] = useState("demo");
+  const [groups, setGroups] = useState<Group[]>(() => {
+    try {
+      const saved = localStorage.getItem("qs-demo-groups");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return demoGroups;
+  });
+  const [entries, setEntries] = useState<Entry[]>(() => {
+    try {
+      const saved = localStorage.getItem("qs-demo-entries");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return demoEntries;
+  });
+  const [activeId, setActiveId] = useState(() => groups[0]?.id ?? "");
   const [modal, setModal] = useState<"group" | "expense" | null>(null);
   const [gName, setGName] = useState("");
   const [gMembers, setGMembers] = useState("");
@@ -30,9 +38,18 @@ export function Groups() {
 
   useEffect(() => {
     if (!userId) {
-      setGroups(demoGroups);
-      setEntries(demoEntries);
-      setActiveId("demo");
+      try {
+        const savedG = localStorage.getItem("qs-demo-groups");
+        const savedE = localStorage.getItem("qs-demo-entries");
+        const gs = savedG ? JSON.parse(savedG) : [];
+        setGroups(gs);
+        setEntries(savedE ? JSON.parse(savedE) : []);
+        setActiveId(gs[0]?.id ?? "");
+      } catch {
+        setGroups([]);
+        setEntries([]);
+        setActiveId("");
+      }
       return;
     }
     (async () => {
@@ -74,7 +91,15 @@ export function Groups() {
       if (error || !data) return notify("Couldn't save — try again");
       local.id = data.id;
     }
-    setEntries((a) => [local, ...a]);
+    setEntries((a) => {
+      const updated = [local, ...a];
+      if (!userId) {
+        try {
+          localStorage.setItem("qs-demo-entries", JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
   };
 
   const createGroup = async () => {
@@ -86,7 +111,15 @@ export function Groups() {
       if (error || !data) return notify("Couldn't create group");
       id = data.id;
     }
-    setGroups((a) => [...a, { id, name: gName.trim(), members }]);
+    setGroups((a) => {
+      const updated = [...a, { id, name: gName.trim(), members }];
+      if (!userId) {
+        try {
+          localStorage.setItem("qs-demo-groups", JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
     setActiveId(id);
     setModal(null);
     setGName("");
@@ -107,9 +140,10 @@ export function Groups() {
         </Button>
       </div>
       {!userId && (
-        <Link to="/auth" className="small muted">
-          <Icon name="cloud" /> Sample group — sign in to save your own groups
-        </Link>
+        <div className="small muted row">
+          <Icon name="devices" />
+          Local storage mode — sign in to sync groups across devices
+        </div>
       )}
       {groups.length > 0 && (
         <div className="rail">
@@ -134,7 +168,7 @@ export function Groups() {
                   <div className="grow strong">{m}</div>
                   <div className={`mono strong ${b > 0 ? "mint" : b < 0 ? "pink" : "muted"}`}>
                     {b > 0 ? "gets " : b < 0 ? "owes " : "settled"}
-                    {b !== 0 && money(Math.abs(b))}
+                    {b !== 0 && formatMoney(Math.abs(b))}
                   </div>
                 </div>
               );
@@ -149,7 +183,7 @@ export function Groups() {
             transfers.map((t) => (
               <div className="row between settle-row" key={t.from + t.to}>
                 <span className="small">
-                  <strong>{t.from}</strong> → <strong>{t.to}</strong> <span className="mono">{money(t.amount)}</span>
+                  <strong>{t.from}</strong> → <strong>{t.to}</strong> <span className="mono">{formatMoney(t.amount)}</span>
                 </span>
                 <Button
                   variant="tool"
@@ -174,20 +208,31 @@ export function Groups() {
                 <span>
                   <Icon name={e.kind === "settle" ? "handshake" : "receipt_long"} className="muted" /> {e.description || "Expense"} · {e.paidBy}
                 </span>
-                <span className="mono">{money(e.amount)}</span>
+                <span className="mono">{formatMoney(e.amount)}</span>
               </div>
             ))}
           </div>
         </>
       ) : (
-        <p className="small muted">Create a group to start tracking who owes whom.</p>
+        <div className="p-4 rounded-2xl bg-secondary/30 border border-border/40 text-center stack">
+          <div className="icon-disc mx-auto">
+            <Icon name="group_off" className="muted" />
+          </div>
+          <div className="strong">No split groups yet</div>
+          <p className="small muted">Create a group to start tracking shared expenses with friends.</p>
+          <div>
+            <Button variant="action" onClick={() => setModal("group")}>
+              <Icon name="group_add" /> Create First Group
+            </Button>
+          </div>
+        </div>
       )}
       {modal === "group" && (
         <Modal title="New group" onClose={() => setModal(null)}>
           <form className="stack" onSubmit={(e) => { e.preventDefault(); createGroup(); }}>
             <label className="stack small">
               Group name
-              <input className="field" required value={gName} onChange={(e) => setGName(e.target.value)} />
+              <input className="field" required placeholder="e.g. Goa Trip, Flatmates" value={gName} onChange={(e) => setGName(e.target.value)} />
             </label>
             <label className="stack small">
               Friends (comma separated)
@@ -214,10 +259,10 @@ export function Groups() {
           >
             <label className="stack small">
               What for
-              <input className="field" value={desc} onChange={(e) => setDesc(e.target.value)} />
+              <input className="field" placeholder="Dinner, cab, groceries..." value={desc} onChange={(e) => setDesc(e.target.value)} />
             </label>
             <label className="stack small">
-              Amount (₹)
+              Amount ({currencySymbol})
               <input className="field" type="number" min="0.01" step="0.01" required value={amt} onChange={(e) => setAmt(e.target.value)} />
             </label>
             <label className="stack small">

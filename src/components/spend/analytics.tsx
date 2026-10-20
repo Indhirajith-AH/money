@@ -63,7 +63,7 @@ export function buildAnalytics(expenses: Expense[], period: string, dailyAllowan
 }
 const hourLabel = (h: number) => new Date(2000, 0, 1, h).toLocaleTimeString("en-US", { hour: "numeric" });
 export function Analytics() {
-  const { expenses, dailyAllowance } = useSpend();
+  const { expenses, dailyAllowance, currencySymbol } = useSpend();
   const [period, setPeriod] = useState("Week");
   const a = buildAnalytics(expenses, period, dailyAllowance);
   const max = Math.max(a.target, ...a.buckets.map((b) => b.total), 1);
@@ -94,7 +94,7 @@ export function Analytics() {
         </div>
         <div className="row items-baseline">
           <span className="money">
-            ${a.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {currencySymbol}{a.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <span className="label mint">{a.under === a.buckets.length ? "on track" : "watch pace"}</span>
         </div>
@@ -104,7 +104,7 @@ export function Analytics() {
         <div className="row between">
           <div>
             <h2>{period === "Week" ? "Daily" : period === "Month" ? "Weekly" : "Monthly"} Pace</h2>
-            <p className="small muted">Target: ${a.target.toFixed(2)} per bar</p>
+            <p className="small muted">Target: {currencySymbol}{a.target.toFixed(2)} per bar</p>
           </div>
           <div className="legend">
             <i className="dot" />
@@ -114,10 +114,10 @@ export function Analytics() {
           </div>
         </div>
         <div className="chart">
-          <span className="target-label mono">Target ${a.target.toFixed(0)}</span>
+          <span className="target-label mono">Target {currencySymbol}{a.target.toFixed(0)}</span>
           {a.buckets.map((b, i) => (
-            <div key={i} className="bar-col" title={`$${b.total.toFixed(2)}`}>
-              <span className={`bar-value ${b.total > a.target ? "pink" : "muted"}`}>${Math.round(b.total)}</span>
+            <div key={i} className="bar-col" title={`${currencySymbol}${b.total.toFixed(2)}`}>
+              <span className={`bar-value ${b.total > a.target ? "pink" : "muted"}`}>{currencySymbol}{Math.round(b.total)}</span>
               <div
                 className={`bar ${b.total > a.target ? "spike" : ""}`}
                 style={{ height: `${Math.max(2, (b.total / max) * 100)}%` }}
@@ -165,7 +165,7 @@ export function Analytics() {
                 <span>{name}</span>
               </div>
               <div className="row">
-                <strong className="mono small">${total.toFixed(2)}</strong>
+                <strong className="mono small">{currencySymbol}{total.toFixed(2)}</strong>
                 <span className="label">{percent}%</span>
               </div>
             </div>

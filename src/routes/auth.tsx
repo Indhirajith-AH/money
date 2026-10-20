@@ -122,21 +122,6 @@ function AuthPage() {
     setBusy(false);
   };
 
-  const signInWithGoogle = async () => {
-    setBusy(true);
-    setMsg("");
-    setIsError(false);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) {
-      setMsg(error.message);
-      setIsError(true);
-      setBusy(false);
-    }
-  };
-
   return (
     <main className="page stack">
       <section className="panel stack">
@@ -149,11 +134,6 @@ function AuthPage() {
             <p className="small muted">Your expenses sync to every device you sign in on.</p>
           </div>
         </div>
-        <Button variant="action" disabled={busy} onClick={signInWithGoogle}>
-          <Icon name="account_circle" />
-          Continue with Google
-        </Button>
-        <div className="label uppercase text-center">or with email</div>
         <form className="stack" onSubmit={submit}>
           {mode === "up" && (
             <input

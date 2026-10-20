@@ -51,10 +51,10 @@ function SwitchRow({
   );
 }
 export function Settings() {
-  const { expenses, notify, profile, updateProfile, session, signOut } = useSpend();
-  const [budget, setBudget] = useState("2,250.00");
+  const { expenses, notify, profile, updateProfile, session, signOut, currencySymbol } = useSpend();
+  const [budget, setBudget] = useState("0.00");
   const [mode, setMode] = useState("Dynamic Engine");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("INR");
   const [guide, setGuide] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<{ prompt: () => Promise<void> } | null>(null);
   useEffect(() => {
@@ -69,14 +69,14 @@ export function Settings() {
   useEffect(() => {
     if (!profile) return;
     setBudget(
-      profile.monthly_budget.toLocaleString("en-US", {
+      (profile.monthly_budget || 0).toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
     );
-    setCurrency(profile.currency);
+    setCurrency(profile.currency || "INR");
   }, [profile?.monthly_budget, profile?.currency]);
-  const symbols: Record<string, string> = { USD: "$", INR: "₹", EUR: "€", GBP: "£", AED: "د.إ" };
+  const symbols: Record<string, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ" };
 
   const [customCats, setCustomCats] = useState<CategoryItem[]>([]);
   const [newCatName, setNewCatName] = useState("");
@@ -173,13 +173,37 @@ export function Settings() {
         <div className="panel stack">
           <div className="setting-row">
             <div>
+              <label htmlFor="currency-select" className="small muted">
+                Preferred Currency
+              </label>
+              <div className="label">Used across all calculations &amp; splits</div>
+            </div>
+            <select
+              id="currency-select"
+              className="field small"
+              value={currency}
+              onChange={(e) => {
+                const newCur = e.target.value;
+                setCurrency(newCur);
+                void updateProfile({ currency: newCur });
+              }}
+            >
+              {Object.entries(symbols).map(([c, s]) => (
+                <option value={c} key={c}>
+                  {c} ({s})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="setting-row">
+            <div>
               <label htmlFor="monthly-budget" className="small muted">
                 Total Monthly Allocation
               </label>
               <div className="label">Calculated across 30 active days</div>
             </div>
             <div className="row field">
-              <span className="mint">{symbols[currency]}</span>
+              <span className="mint">{symbols[currency] || currencySymbol}</span>
               <input
                 id="monthly-budget"
                 className="budget-input bg-transparent border-0 outline-none mono"
@@ -187,14 +211,13 @@ export function Settings() {
                 onChange={(e) => setBudget(e.target.value)}
                 onBlur={() => {
                   const n = Number(budget.replaceAll(",", ""));
-                  if (n > 0 && session) void updateProfile({ monthly_budget: n });
-                  if (n > 0)
-                    setBudget(
-                      n.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }),
-                    );
+                  void updateProfile({ monthly_budget: n >= 0 ? n : 0 });
+                  setBudget(
+                    (n >= 0 ? n : 0).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }),
+                  );
                 }}
               />
             </div>
@@ -213,7 +236,7 @@ export function Settings() {
                   <small>
                     {m === "Dynamic Engine"
                       ? "Remaining ÷ Days"
-                      : `${symbols[currency]}${((Number(budget.replaceAll(",", "")) || 2250) / 30).toFixed(2)} flat / day`}
+                      : `${symbols[currency] || currencySymbol}${((Number(budget.replaceAll(",", "")) || 0) / 30).toFixed(2)} flat / day`}
                   </small>
                 </Button>
               ))}
@@ -221,16 +244,16 @@ export function Settings() {
           </div>
           <div className="inset-row row between">
             <div className="row">
-              <div className="icon-disc mono small">72%</div>
+              <div className="icon-disc mono small">100%</div>
               <div>
                 <div className="mono small">
-                  {symbols[currency]}
-                  {mode === "Dynamic Engine"
-                    ? "72.58"
-                    : ((Number(budget.replaceAll(",", "")) || 2250) / 30).toFixed(2)}{" "}
+                  {symbols[currency] || currencySymbol}
+                  {((Number(budget.replaceAll(",", "")) || 0) / 30).toFixed(2)}{" "}
                   available today
                 </div>
-                <div className="small muted">19 days remaining in cycle</div>
+                <div className="small muted">
+                  {Math.max(0, 30 - new Date().getDate())} days remaining in cycle
+                </div>
               </div>
             </div>
             <Icon name="auto_graph" className="mint" />

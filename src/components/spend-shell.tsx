@@ -25,42 +25,29 @@ const referenceImages = {
   profile:
     "https://lh3.googleusercontent.com/aida-public/AB6AXuDKtR-lnXIVAaLLur7Ewk5eC-4GzVG-N8r1W9VXZUoPm0YjqexwTTlXwlpJHBbx7RGOTsgLt1BMEXk4Cb7umCZjFiUAOtaMKueXZuFoK3hRykw7PLMsU2gWkpf4epaK6SW2ieg2BXYkx7vK4hG6ePiO2R1q0Ema7RwDeKDhwTv6DftEYCGbTMdOFdyPJ7E_K11R9ZoVUUeLRL7osUPczkJjE2KxSWy2cDQG3fdKRhMvWPGalY6AI7gy",
 };
-const initial: Expense[] = [
-  {
-    id: 1,
-    name: "Artisan Espresso Bar",
-    category: "Coffee",
-    amount: 4.75,
-    time: "12:45 PM",
-    icon: "local_cafe",
-  },
-  {
-    id: 2,
-    name: "Metro Transit Card",
-    category: "Transit",
-    amount: 2.75,
-    time: "9:15 AM",
-    icon: "directions_subway",
-  },
-  {
-    id: 3,
-    name: "Avocado Toast & Matcha",
-    category: "Food & Dining",
-    amount: 16.5,
-    time: "8:30 AM",
-    icon: "restaurant",
-  },
-];
+const initial: Expense[] = [];
+
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  INR: "₹",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  AED: "د.إ",
+};
+
 export type Profile = {
   display_name: string | null;
   avatar_url: string | null;
   currency: string;
   monthly_budget: number;
 };
-type SpendContext = {
+export type SpendContext = {
   expenses: Expense[];
   remaining: number;
   dailyAllowance: number;
+  currency: string;
+  currencySymbol: string;
+  formatMoney: (amount: number) => string;
   session: Session | null;
   profile: Profile | null;
   synced: boolean;
@@ -108,7 +95,7 @@ export type Op =
   | { type: "expense"; row: ExpenseDraft }
   | { type: "profile"; patch: Partial<Profile> }
   | { type: "budget"; category: string; cap: number | null };
-const demoBudgets: Record<string, number> = { "Food & Drink": 300, Groceries: 400, Entertainment: 150 };
+const demoBudgets: Record<string, number> = {};
 async function runOp(op: Op, userId: string): Promise<boolean> {
   try {
     if (op.type === "expense") {
@@ -135,8 +122,20 @@ async function runOp(op: Op, userId: string): Promise<boolean> {
 }
 const Context = createContext<SpendContext | null>(null);
 export function SpendProvider({ children }: { children: ReactNode }) {
-  const [demoExpenses, setDemoExpenses] = useState(initial);
-  const [demoRemaining, setDemoRemaining] = useState(34.5);
+  const [demoExpenses, setDemoExpenses] = useState<Expense[]>(() => {
+    try {
+      const saved = localStorage.getItem("qs-demo-expenses");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+  const [demoProfile, setDemoProfile] = useState<Profile>(() => {
+    try {
+      const saved = localStorage.getItem("qs-demo-profile");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { display_name: null, avatar_url: null, currency: "INR", monthly_budget: 0 };
+  });
   const [cloudExpenses, setCloudExpenses] = useState<Expense[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -193,7 +192,7 @@ export function SpendProvider({ children }: { children: ReactNode }) {
       if (!live || pe || re) return;
       const pending: Op[] = JSON.parse(localStorage.getItem(`qs-queue-${userId}`) ?? "[]");
       const localRows = pending.flatMap((o, i) => (o.type === "expense" ? [toExpense({ ...o.row, id: `local-${i}` })] : []));
-      setProfile(p ? { ...p, monthly_budget: Number(p.monthly_budget) } : { display_name: null, avatar_url: null, currency: "USD", monthly_budget: 1500 });
+      setProfile(p ? { ...p, monthly_budget: Number(p.monthly_budget) } : { display_name: null, avatar_url: null, currency: "INR", monthly_budget: 0 });
       setCloudExpenses([...localRows, ...(rows ?? []).map((r) => toExpense(r as Row))]);
       setBudgets(Object.fromEntries((b ?? []).map((x) => [x.category, Number(x.cap)])));
     })();
@@ -232,11 +231,25 @@ export function SpendProvider({ children }: { children: ReactNode }) {
     };
   }, [userId, notify]);
   const synced = !!userId;
-  const dailyAllowance = synced ? dailyAllowanceFor(profile?.monthly_budget ?? 1500) : 75;
+  const activeProfile = synced ? profile : demoProfile;
+  const currency = activeProfile?.currency || "INR";
+  const currencySymbol = CURRENCY_SYMBOLS[currency] || "₹";
+
+  const formatMoney = useCallback(
+    (n: number) => {
+      const sym = CURRENCY_SYMBOLS[currency] || "₹";
+      const loc = currency === "INR" ? "en-IN" : "en-US";
+      return `${sym}${Number(n || 0).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    },
+    [currency],
+  );
+
+  const monthlyBudget = activeProfile?.monthly_budget ?? 0;
+  const dailyAllowance = monthlyBudget > 0 ? dailyAllowanceFor(monthlyBudget) : 0;
   const expenses = synced ? cloudExpenses : demoExpenses;
-  const remaining = synced
-    ? dailyAllowance - cloudExpenses.filter((e) => isToday(e.spentAt)).reduce((s, e) => s + e.amount, 0)
-    : demoRemaining;
+  const todaySpent = expenses.filter((e) => isToday(e.spentAt)).reduce((s, e) => s + e.amount, 0);
+  const remaining = dailyAllowance - todaySpent;
+
   const addExpense = (e: Omit<Expense, "id" | "time">) => {
     if (synced && userId) {
       const spent_at = new Date().toISOString();
@@ -260,8 +273,14 @@ export function SpendProvider({ children }: { children: ReactNode }) {
         });
       return;
     }
-    setDemoExpenses((a) => [{ ...e, id: Date.now(), time: fmtTime(new Date()), spentAt: new Date().toISOString() }, ...a]);
-    setDemoRemaining((r) => r - e.amount);
+    const newExp: Expense = { ...e, id: Date.now(), time: fmtTime(new Date()), spentAt: new Date().toISOString() };
+    setDemoExpenses((a) => {
+      const updated = [newExp, ...a];
+      try {
+        localStorage.setItem("qs-demo-expenses", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     notify("Expense Recorded!");
   };
   const removeExpense = (id: Expense["id"]) => {
@@ -277,8 +296,13 @@ export function SpendProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
-    setDemoExpenses((a) => a.filter((x) => x.id !== id));
-    setDemoRemaining((r) => r + e.amount);
+    setDemoExpenses((a) => {
+      const updated = a.filter((x) => x.id !== id);
+      try {
+        localStorage.setItem("qs-demo-expenses", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     notify("Expense refunded");
   };
   const editExpense = (id: Expense["id"], name: string, category: string, amount: number) => {
@@ -291,12 +315,27 @@ export function SpendProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
-    setDemoRemaining((r) => r + e.amount - amount);
-    setDemoExpenses((a) => a.map((x) => (x.id === id ? { ...x, name, category, amount } : x)));
+    setDemoExpenses((a) => {
+      const updated = a.map((x) => (x.id === id ? { ...x, name, category, amount } : x));
+      try {
+        localStorage.setItem("qs-demo-expenses", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     notify("Expense updated");
   };
   const updateProfile = async (patch: Partial<Profile>) => {
-    if (!userId) return;
+    if (!userId) {
+      setDemoProfile((prev) => {
+        const next = { ...prev, ...patch };
+        try {
+          localStorage.setItem("qs-demo-profile", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      notify("Profile updated");
+      return;
+    }
     setProfile((p) => (p ? { ...p, ...patch } : p));
     if (!navigator.onLine) return enqueue({ type: "profile", patch });
     const { error } = await supabase.from("profiles").upsert({ id: userId, ...patch, updated_at: new Date().toISOString() });
@@ -307,6 +346,11 @@ export function SpendProvider({ children }: { children: ReactNode }) {
       const n = { ...b };
       if (cap && cap > 0) n[category] = cap;
       else delete n[category];
+      if (!userId) {
+        try {
+          localStorage.setItem("qs-demo-budgets", JSON.stringify(n));
+        } catch {}
+      }
       return n;
     });
     if (!userId) return;
@@ -320,7 +364,27 @@ export function SpendProvider({ children }: { children: ReactNode }) {
   };
   return (
     <Context.Provider
-      value={{ expenses, remaining, dailyAllowance, session, profile, synced, addExpense, removeExpense, editExpense, updateProfile, signOut, notify, budgets, setBudget, online, pending: queue.length }}
+      value={{
+        expenses,
+        remaining,
+        dailyAllowance,
+        currency,
+        currencySymbol,
+        formatMoney,
+        session,
+        profile: activeProfile,
+        synced,
+        addExpense,
+        removeExpense,
+        editExpense,
+        updateProfile,
+        signOut,
+        notify,
+        budgets,
+        setBudget,
+        online,
+        pending: queue.length,
+      }}
     >
       {children}
       {toast && (

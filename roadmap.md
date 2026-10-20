@@ -2,8 +2,7 @@
 - [x] Recreate Today, Quick Log, Analytics, Settings, and Split from supplied HTML.
 - [x] Connect navigation and interactive screen controls.
 - [x] Verify screen rendering and logging flow.
-## Round 2 — Core upgrade
-- [x] Sign-in (email, Google, Lovable) + profiles
+- [x] Sign-in (email + password + username) + profiles
 - [x] Cloud-synced expenses, budget and currency
 - [x] Analytics built from logged expenses
 - [x] AI receipt scanning on Quick Log

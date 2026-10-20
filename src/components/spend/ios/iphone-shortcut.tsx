@@ -3,11 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Icon, useSpend } from "@/components/spend-shell";
 
 const steps = [
-  { icon: "ios_share", title: "Add QuickSpend to Home Screen", text: "In Safari tap Share → Add to Home Screen. This makes Quick Log open full-screen like an app." },
   { icon: "apps", title: "Open the Shortcuts app", text: "Tap + to create a new shortcut and name it “Quick Log”." },
-  { icon: "link", title: "Add the “Open URLs” action", text: "Search for Open URLs and paste the Quick Log link copied below." },
+  { icon: "web", title: "Add the “Show Web View” action", text: "Search for “Show Web View” (or “Show Web Page”, NOT “Open URLs”). Paste the Quick Log link copied below. This makes it pop up as a floating card without opening Safari!" },
   { icon: "settings", title: "Turn on Back Tap", text: "Settings → Accessibility → Touch → Back Tap → Double Tap → pick “Quick Log”." },
-  { icon: "touch_app", title: "Double-tap the back of your iPhone", text: "Quick Log opens instantly, ready for the amount." },
+  { icon: "touch_app", title: "Double-tap the back of your iPhone", text: "A floating pop-up card appears instantly over your screen, ready to log and auto-dismiss." },
 ];
 
 export function IphoneShortcut() {

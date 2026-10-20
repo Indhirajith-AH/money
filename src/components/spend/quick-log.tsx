@@ -10,10 +10,8 @@ import {
   type CategoryItem,
 } from "@/lib/categories";
 
-const quickAmounts = [5, 10, 20, 50];
-
 export function QuickLog() {
-  const { addExpense, notify, remaining } = useSpend();
+  const { addExpense, notify, remaining, currencySymbol } = useSpend();
   const navigate = useNavigate();
 
   const [customCats, setCustomCats] = useState<CategoryItem[]>([]);
@@ -22,6 +20,8 @@ export function QuickLog() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const quickAmounts = currencySymbol === "₹" ? [50, 100, 200, 500] : [5, 10, 20, 50];
 
   // Load custom categories from settings
   useEffect(() => {
@@ -70,7 +70,7 @@ export function QuickLog() {
       icon: selectedCat?.icon ?? "receipt_long",
     });
 
-    notify(`Logged $${numAmount.toFixed(2)} for ${category}!`);
+    notify(`Logged ${currencySymbol}${numAmount.toFixed(2)} for ${category}!`);
     closePopup();
   };
 
@@ -111,7 +111,7 @@ export function QuickLog() {
             Remaining Balance
           </span>
           <span className="text-2xl font-bold font-mono text-primary leading-tight">
-            ${remaining.toFixed(2)}
+            {currencySymbol}{remaining.toFixed(2)}
           </span>
         </div>
         <div className="text-right flex flex-col items-end">
@@ -123,7 +123,7 @@ export function QuickLog() {
               projectedRemaining < 0 ? "text-destructive" : "text-primary/90"
             }`}
           >
-            {projectedRemaining < 0 ? "-" : ""}${Math.abs(projectedRemaining).toFixed(2)}
+            {projectedRemaining < 0 ? "-" : ""}{currencySymbol}{Math.abs(projectedRemaining).toFixed(2)}
           </span>
         </div>
       </div>
@@ -163,7 +163,7 @@ export function QuickLog() {
           </label>
           <div className="relative flex items-center">
             <span className="absolute left-4 text-2xl font-bold font-mono text-primary pointer-events-none">
-              $
+              {currencySymbol}
             </span>
             <input
               ref={inputRef}
@@ -189,7 +189,7 @@ export function QuickLog() {
                 onClick={() => setAmount(q.toString())}
                 className="px-2.5 py-1 text-xs font-mono font-medium rounded-lg bg-secondary/80 border border-border/70 hover:border-primary hover:text-primary transition-all cursor-pointer"
               >
-                ${q}
+                {currencySymbol}{q}
               </button>
             ))}
           </div>

@@ -4,17 +4,20 @@ import { Icon, Modal, Toggle, useSpend } from "@/components/spend-shell";
 import { Groups } from "./groups";
 type Member = { name: string; detail: string; host?: boolean; allocation: number };
 export function Split() {
-  const { notify } = useSpend();
-  const [total, setTotal] = useState("2,400.00");
-  const [currency, setCurrency] = useState("INR");
+  const { notify, currency: globalCurrency, currencySymbol: globalSymbol, profile } = useSpend();
+  const [total, setTotal] = useState("0.00");
+  const [currency, setCurrency] = useState(globalCurrency || "INR");
   const [mode, setMode] = useState("Equal Split");
+  const [upi, setUpi] = useState(() => {
+    try {
+      return localStorage.getItem("qs-upi-id") || "";
+    } catch {
+      return "";
+    }
+  });
   const [members, setMembers] = useState<Member[]>([
-    { name: "You", detail: "alex.verma@okhdfcbank", host: true, allocation: 600 },
-    { name: "Rahul Sharma", detail: "+91 98765 43210", allocation: 600 },
-    { name: "Ananya Iyer", detail: "+91 98201 12345", allocation: 600 },
-    { name: "Vikram Malhotra", detail: "+91 97110 56789", allocation: 600 },
+    { name: "You", detail: upi || "Host", host: true, allocation: 0 },
   ]);
-  const [upi, setUpi] = useState("alex.verma@okhdfcbank");
   const [upiDraft, setUpiDraft] = useState(upi);
   const [editUpi, setEditUpi] = useState(false);
   const [add, setAdd] = useState(false);
@@ -22,9 +25,9 @@ export function Split() {
   const [phone, setPhone] = useState("");
   const [deduct, setDeduct] = useState(true);
   const symbols: Record<string, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ" };
-  const symbol = symbols[currency];
+  const symbol = symbols[currency] || globalSymbol || "₹";
   const num = Number(total.replaceAll(",", "")) || 0;
-  const equal = num / members.length;
+  const equal = members.length > 0 ? num / members.length : 0;
   const share = (m: Member) =>
     mode === "Equal Split"
       ? equal
@@ -34,10 +37,11 @@ export function Split() {
   const fmt = (n: number) =>
     symbol + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const host = members[0] ?? { name: "You", detail: upi, host: true, allocation: 0 };
-  const recipient = members[1] ?? host;
+  const recipient = members.length > 1 ? members[1]! : host;
   const recipientAmount = share(recipient);
-  const link = `upi://pay?pa=${encodeURIComponent(upi)}&am=${recipientAmount.toFixed(2)}&cu=${currency}`;
-  const msg = `👋 Hey ${recipient.name.split(" ")[0]}! Alex has split the bill for "Team Dinner" (${fmt(num)} total). Your individual share is ${fmt(recipientAmount)}. Pay directly via UPI to: ${upi}\nOr tap to pay: ${link}`;
+  const link = upi ? `upi://pay?pa=${encodeURIComponent(upi)}&am=${recipientAmount.toFixed(2)}&cu=${currency}` : "";
+  const senderName = profile?.display_name || "I";
+  const msg = `👋 Hey ${recipient.name.split(" ")[0]}! ${senderName} has split the bill (${fmt(num)} total). Your individual share is ${fmt(recipientAmount)}.${upi ? ` Pay directly via UPI to: ${upi}\nOr tap to pay: ${link}` : ""}`;
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -292,8 +296,8 @@ export function Split() {
       </section>
       <div className="row small muted">
         <Icon name="speed" className="mint" />
-        QuickSpend safely isolates split debts. Incoming settlements will auto-clear Rahul, Ananya
-        &amp; Vikram without skewing your personal monthly telemetry.
+        QuickSpend safely isolates split debts. Incoming settlements will auto-clear member balances
+        without skewing your personal monthly telemetry.
       </div>
       {add && (
         <Modal title="Add Person" onClose={() => setAdd(false)}>
@@ -342,8 +346,16 @@ export function Split() {
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              setUpi(upiDraft);
+              const trimmed = upiDraft.trim();
+              setUpi(trimmed);
+              try {
+                localStorage.setItem("qs-upi-id", trimmed);
+              } catch {}
+              setMembers((a) =>
+                a.map((m) => (m.host ? { ...m, detail: trimmed || "Host" } : m)),
+              );
               setEditUpi(false);
+              notify("UPI ID updated");
             }}
           >
             <label className="small stack">
