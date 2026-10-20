@@ -29,9 +29,32 @@ function AuthPage() {
   const [isError, setIsError] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  const [verifiedHandled, setVerifiedHandled] = useState(false);
+
   useEffect(() => {
-    if (session) navigate({ to: "/", replace: true });
-  }, [session, navigate]);
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const isVerified =
+      urlParams.get("verified") === "true" ||
+      hash.includes("type=signup") ||
+      hash.includes("type=email_change") ||
+      hash.includes("type=recovery");
+
+    if (isVerified) {
+      setVerifiedHandled(true);
+      void supabase.auth.signOut();
+      setMode("in");
+      setMsg("Email verified successfully! You can now sign in with your credentials.");
+      setIsError(false);
+      window.history.replaceState({}, document.title, "/auth");
+      return;
+    }
+
+    if (session && !verifiedHandled) {
+      navigate({ to: "/", replace: true });
+    }
+  }, [session, navigate, verifiedHandled]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +72,7 @@ function AuthPage() {
           data: {
             display_name: username.trim() || undefined,
           },
+          emailRedirectTo: `${window.location.origin}/auth?verified=true`,
         },
       });
 
@@ -58,24 +82,8 @@ function AuthPage() {
       } else if (data?.session) {
         navigate({ to: "/", replace: true });
       } else {
-        // Automatically attempt sign in
-        const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
-
-        if (loginData?.session) {
-          navigate({ to: "/", replace: true });
-        } else if (loginErr) {
-          if (loginErr.message.toLowerCase().includes("not confirmed")) {
-            setMsg(
-              "Email confirmation is enabled in your Supabase project. Turn off 'Confirm email' in Supabase Dashboard (Authentication -> Providers -> Email) for instant sign-up."
-            );
-          } else {
-            setMsg(loginErr.message);
-          }
-          setIsError(true);
-        }
+        setMsg("Account created! Please check your email to confirm your account before signing in.");
+        setIsError(false);
       }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -84,9 +92,7 @@ function AuthPage() {
       });
       if (error) {
         if (error.message.toLowerCase().includes("not confirmed")) {
-          setMsg(
-            "Email confirmation is enabled in your Supabase project. Turn off 'Confirm email' in Supabase Dashboard (Authentication -> Providers -> Email) to sign in."
-          );
+          setMsg("Please check your email to confirm your account before signing in.");
         } else {
           setMsg(error.message);
         }
@@ -94,6 +100,24 @@ function AuthPage() {
       } else if (data?.session) {
         navigate({ to: "/", replace: true });
       }
+    }
+    setBusy(false);
+  };
+
+  const resendConfirmation = async () => {
+    if (!email) return;
+    setBusy(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (error) {
+      setMsg(error.message);
+      setIsError(true);
+    } else {
+      setMsg("Confirmation email resent! Please check your inbox and spam folder.");
+      setIsError(false);
     }
     setBusy(false);
   };
@@ -176,6 +200,16 @@ function AuthPage() {
             role={isError ? "alert" : "status"}
           >
             <p>{msg}</p>
+            {isError && msg.toLowerCase().includes("confirm your account") && (
+              <button
+                type="button"
+                onClick={resendConfirmation}
+                disabled={busy}
+                className="mt-2 text-xs underline font-semibold text-amber-300 hover:text-amber-200 block"
+              >
+                Resend confirmation email to {email}
+              </button>
+            )}
           </div>
         )}
 

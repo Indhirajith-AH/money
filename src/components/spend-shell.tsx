@@ -355,6 +355,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/analytics" as const, name: "Analytics", icon: "insights" },
     { to: "/settings" as const, name: "Settings", icon: "tune" },
   ];
+  const isQuickLog = pathname === "/quick-log";
+
+  if (isQuickLog) {
+    return (
+      <main className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md overflow-y-auto">
+        {children}
+      </main>
+    );
+  }
+
   return (
     <>
       {(!online || pending > 0) && (

@@ -5,6 +5,13 @@ import { Icon, Toggle, Modal, useSpend } from "@/components/spend-shell";
 import { ReceivePay } from "@/components/spend/receive-pay";
 import { IphoneShortcut } from "@/components/spend/ios/iphone-shortcut";
 import { MacOSShortcut } from "@/components/spend/macos/macos-shortcut";
+import {
+  DEFAULT_MAIN_CATEGORIES,
+  FOOTER_QUICK_CATEGORY,
+  getCustomCategories,
+  saveCustomCategories,
+  type CategoryItem,
+} from "@/lib/categories";
 function Heading({ icon, title, status }: { icon: string; title: string; status: string }) {
   return (
     <div className="section-head">
@@ -70,6 +77,39 @@ export function Settings() {
     setCurrency(profile.currency);
   }, [profile?.monthly_budget, profile?.currency]);
   const symbols: Record<string, string> = { USD: "$", INR: "₹", EUR: "€", GBP: "£", AED: "د.إ" };
+
+  const [customCats, setCustomCats] = useState<CategoryItem[]>([]);
+  const [newCatName, setNewCatName] = useState("");
+
+  useEffect(() => {
+    setCustomCats(getCustomCategories());
+  }, []);
+
+  const handleAddCustomCat = () => {
+    const trimmed = newCatName.trim();
+    if (!trimmed) return;
+    if (
+      DEFAULT_MAIN_CATEGORIES.some((c) => c.name.toLowerCase() === trimmed.toLowerCase()) ||
+      customCats.some((c) => c.name.toLowerCase() === trimmed.toLowerCase()) ||
+      trimmed.toLowerCase() === FOOTER_QUICK_CATEGORY.name.toLowerCase()
+    ) {
+      notify("Category already exists");
+      return;
+    }
+    const updated = [...customCats, { name: trimmed, icon: "label", isCustom: true }];
+    setCustomCats(updated);
+    saveCustomCategories(updated);
+    setNewCatName("");
+    notify(`Added category "${trimmed}" to Quick Log!`);
+  };
+
+  const handleRemoveCustomCat = (name: string) => {
+    const updated = customCats.filter((c) => c.name !== name);
+    setCustomCats(updated);
+    saveCustomCategories(updated);
+    notify(`Removed category "${name}"`);
+  };
+
   const download = (content: string, name: string, type: string) => {
     const url = URL.createObjectURL(new Blob([content], { type }));
     const a = document.createElement("a");
@@ -199,6 +239,75 @@ export function Settings() {
             title="Surplus Rollover"
             description="Carry unspent funds forward to raise tomorrow's allowance"
           />
+        </div>
+      </section>
+
+      {/* Custom Categories Configuration */}
+      <section>
+        <Heading icon="category" title="Quick Log Categories" status="Customizable" />
+        <div className="panel stack">
+          <div className="small muted">
+            Categories available in your standalone Quick Log pop-up screen.
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {DEFAULT_MAIN_CATEGORIES.map((c) => (
+              <div
+                key={c.name}
+                className="badge row px-3 py-1.5 text-xs bg-secondary/60 border border-border/60"
+              >
+                <Icon name={c.icon} className="mint mr-1 text-sm" />
+                <span>{c.name}</span>
+                <span className="text-[10px] text-muted-foreground ml-1">(default)</span>
+              </div>
+            ))}
+            <div className="badge row px-3 py-1.5 text-xs bg-secondary/60 border border-border/60">
+              <Icon name={FOOTER_QUICK_CATEGORY.icon} className="mint mr-1 text-sm" />
+              <span>{FOOTER_QUICK_CATEGORY.name}</span>
+              <span className="text-[10px] text-muted-foreground ml-1">(footer)</span>
+            </div>
+            {customCats.map((c) => (
+              <div
+                key={c.name}
+                className="badge row px-3 py-1.5 text-xs bg-primary/10 border border-primary/40 text-primary"
+              >
+                <Icon name={c.icon} className="mr-1 text-sm" />
+                <span className="font-semibold">{c.name}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveCustomCat(c.name)}
+                  className="ml-2 text-muted-foreground hover:text-destructive cursor-pointer font-bold"
+                  title="Remove category"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="row gap-2 mt-2 pt-2 border-t border-border/40">
+            <input
+              type="text"
+              placeholder="Add extra category (e.g. Gym, Books, Travel)"
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              className="field flex-1 text-sm py-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddCustomCat();
+                }
+              }}
+            />
+            <Button
+              variant="action"
+              onClick={handleAddCustomCat}
+              disabled={!newCatName.trim()}
+              className="cursor-pointer"
+            >
+              <Icon name="add" />
+              Add Extra
+            </Button>
+          </div>
         </div>
       </section>
       <section>
