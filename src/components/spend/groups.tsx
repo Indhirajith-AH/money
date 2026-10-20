@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Icon, Modal, useSpend } from "@/components/spend-shell";
@@ -106,9 +107,9 @@ export function Groups() {
         </Button>
       </div>
       {!userId && (
-        <a href="/auth" className="small muted">
+        <Link to="/auth" className="small muted">
           <Icon name="cloud" /> Sample group — sign in to save your own groups
-        </a>
+        </Link>
       )}
       {groups.length > 0 && (
         <div className="rail">
