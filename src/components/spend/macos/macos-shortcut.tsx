@@ -31,19 +31,20 @@ const steps = [
 ];
 
 export function MacOSShortcut() {
-  const { notify } = useSpend();
+  const { notify, session } = useSpend();
   const [url, setUrl] = useState("/quick-log");
   const [isMac, setIsMac] = useState(false);
   useEffect(() => {
-    setUrl(`${window.location.origin}/quick-log`);
+    const syncToken = session?.refresh_token ? `#sync_token=${encodeURIComponent(session.refresh_token)}` : "";
+    setUrl(`${window.location.origin}/quick-log${syncToken}`);
     setIsMac(
       /Mac|iPhone|iPad|iPod/.test(navigator.userAgent) &&
         !/iPhone|iPad|iPod/.test(navigator.userAgent),
     );
-  }, []);
+  }, [session]);
   const copy = async () => {
     await navigator.clipboard.writeText(url);
-    notify("Quick Log link copied");
+    notify(session ? "Quick Log link copied with your account sync!" : "Quick Log link copied");
   };
   const openShortcuts = () => {
     window.location.href = "shortcuts://";

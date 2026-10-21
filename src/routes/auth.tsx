@@ -43,11 +43,9 @@ function AuthPage() {
 
     if (isVerified) {
       setVerifiedHandled(true);
-      void supabase.auth.signOut();
-      setMode("in");
-      setMsg("Email verified successfully! You can now sign in with your credentials.");
+      setMsg("Welcome to QuickSpend! Your email has been verified successfully.");
       setIsError(false);
-      window.history.replaceState({}, document.title, "/auth");
+      window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
 

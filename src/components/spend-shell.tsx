@@ -404,6 +404,47 @@ export function useSpend() {
 export function AppShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const { session, profile, online, pending } = useSpend();
+  const [verifiedModal, setVerifiedModal] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const isSignupVerified =
+      urlParams.get("verified") === "true" ||
+      urlParams.get("type") === "signup" ||
+      hash.includes("type=signup") ||
+      hash.includes("type=email_change") ||
+      hash.includes("type=recovery") ||
+      (hash.includes("access_token") && (hash.includes("signup") || hash.includes("bearer")));
+
+    if (isSignupVerified) {
+      setVerifiedModal(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
+      if (
+        event === "SIGNED_IN" &&
+        (window.location.hash.includes("type=signup") || window.location.search.includes("verified"))
+      ) {
+        setVerifiedModal(true);
+      }
+    });
+
+    const syncMatch = hash.match(/sync_token=([^&]+)/);
+    if (syncMatch && syncMatch[1]) {
+      const refreshToken = decodeURIComponent(syncMatch[1]);
+      void supabase.auth.setSession({ refresh_token: refreshToken, access_token: "" }).then(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      });
+    }
+
+    return () => {
+      authSub.subscription.unsubscribe();
+    };
+  }, []);
+
   const titles: Record<string, string> = {
     "/": "Today",
     "/quick-log": "Quick Log",
@@ -421,9 +462,37 @@ export function AppShell({ children }: { children: ReactNode }) {
   ];
   const isQuickLog = pathname === "/quick-log";
 
+  const verifiedBanner = verifiedModal && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" role="dialog" aria-modal="true">
+      <div className="w-full max-w-sm bg-card border border-emerald-500/50 rounded-3xl p-6 shadow-2xl text-center stack animate-in zoom-in-95">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-1 border border-emerald-500/40">
+          <Icon name="verified" className="text-3xl text-emerald-400" />
+        </div>
+        <h2 className="text-xl font-bold text-foreground">Welcome to QuickSpend!</h2>
+        <p className="text-sm font-semibold text-emerald-400">
+          Your email has been verified successfully.
+        </p>
+        <p className="small muted">
+          Your account is active and your expenses will sync across all your devices.
+        </p>
+        <div className="mt-3">
+          <Button
+            variant="save"
+            className="w-full py-3 text-base font-semibold cursor-pointer"
+            onClick={() => setVerifiedModal(false)}
+          >
+            <Icon name="check_circle" />
+            Start Logging
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isQuickLog) {
     return (
       <main className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md overflow-y-auto">
+        {verifiedBanner}
         {children}
       </main>
     );
@@ -431,6 +500,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <>
+      {verifiedBanner}
       {(!online || pending > 0) && (
         <div className="offline-bar" role="status">
           <Icon name={online ? "sync" : "cloud_off"} />

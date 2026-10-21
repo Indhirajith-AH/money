@@ -128,6 +128,51 @@ function RootShell({ children }: { children: ReactNode }) {
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="manifest" href="/manifest.json" />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+            [id*="lovable" i], [class*="lovable" i], [data-lovable-badge], [data-lovable], a[href*="lovable" i], iframe[src*="lovable" i], #lovable-badge {
+              display: none !important;
+              opacity: 0 !important;
+              visibility: hidden !important;
+              pointer-events: none !important;
+              width: 0 !important;
+              height: 0 !important;
+              position: absolute !important;
+              clip: rect(0, 0, 0, 0) !important;
+              z-index: -99999 !important;
+            }
+          `,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            (function() {
+              function cleanLovable() {
+                var els = document.querySelectorAll('[id*="lovable" i], [class*="lovable" i], [data-lovable-badge], [data-lovable], a[href*="lovable" i], iframe[src*="lovable" i], #lovable-badge');
+                for (var i = 0; i < els.length; i++) {
+                  try { els[i].remove(); } catch(e) {}
+                }
+                var fixedEls = document.querySelectorAll('div, a, button');
+                for (var j = 0; j < fixedEls.length; j++) {
+                  var el = fixedEls[j];
+                  var txt = (el.textContent || '').toLowerCase();
+                  if (txt.includes('lovable') || (el.getAttribute('aria-label') || '').toLowerCase().includes('lovable')) {
+                    try { el.remove(); } catch(e) {}
+                  }
+                }
+              }
+              cleanLovable();
+              if (typeof MutationObserver !== 'undefined') {
+                new MutationObserver(cleanLovable).observe(document.documentElement, { childList: true, subtree: true });
+              }
+              window.addEventListener('DOMContentLoaded', cleanLovable);
+              window.addEventListener('load', cleanLovable);
+            })();
+          `,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
